@@ -1,25 +1,41 @@
 {
   "expo": {
-    "name": "edusen_mobile",
-    "slug": "edusen_mobile",
+    "name": "EDUSEN",
+    "slug": "edusen-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.edusen.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "L'application utilise la camera pour scanner les QR codes des cartes etudiantes."
+      }
     },
     "android": {
+      "package": "com.edusen.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0f172a",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "L'application utilise la camera pour scanner les QR codes des cartes etudiantes."
+        }
+      ]
+    ]
   }
 }
