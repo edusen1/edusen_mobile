@@ -95,7 +95,7 @@ export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
   Scanner: undefined;
-  Result: { studentId: string };
+  Result: { studentId: string; cardToken?: string };
 };
 
 export type TabParamList = {

@@ -198,6 +198,29 @@ export async function scanEleve(query: string): Promise<ScanResponse> {
   });
 }
 
+/** Verify a card token (new secure QR format) */
+export interface VerifyCardResponse {
+  valid: boolean;
+  actif: boolean;
+  user: {
+    id: string;
+    nom: string;
+    matricule: string | null;
+    role: string;
+    genre: string | null;
+    photoUrl: string | null;
+    classe: string | null;
+    dateNaissance: string | null;
+    lieuNaissance: string | null;
+    telephone: string | null;
+    numeroUrgence: string | null;
+  };
+}
+
+export async function verifyCard(token: string): Promise<VerifyCardResponse> {
+  return apiFetch<VerifyCardResponse>(`/admin/verify-card/${token}`);
+}
+
 /** Check if the device has network connectivity by pinging the health endpoint */
 export async function isOnline(): Promise<boolean> {
   try {

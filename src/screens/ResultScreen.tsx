@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList, Eleve, DetteSummary } from '../types';
-import { scanEleve, isOnline } from '../lib/api';
+import { scanEleve, verifyCard, isOnline } from '../lib/api';
 import type { ScanResponse } from '../lib/api';
 import { cacheStudent, getCachedStudent } from '../lib/cache';
 import { Colors } from '../lib/colors';
@@ -21,7 +21,8 @@ import { Colors } from '../lib/colors';
 type Props = NativeStackScreenProps<RootStackParamList, 'Result'>;
 
 export default function ResultScreen({ route, navigation }: Props) {
-  const { studentId } = route.params;
+  const { studentId, cardToken } = route.params;
+  const cacheKey = cardToken ?? studentId;
 
   const [loading, setLoading] = useState(true);
   const [eleve, setEleve] = useState<Eleve | null>(null);
@@ -32,7 +33,7 @@ export default function ResultScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     load();
-  }, [studentId]);
+  }, [studentId, cardToken]);
 
   const load = async () => {
     setLoading(true);
@@ -42,25 +43,51 @@ export default function ResultScreen({ route, navigation }: Props) {
 
     if (online) {
       try {
-        const result = await scanEleve(studentId);
-        if (result.found && result.eleve) {
-          setEleve(result.eleve);
-          setDettes(result.dettes);
-          setScanResult(result.scanResult);
-          setOffline(false);
-          await cacheStudent(studentId, result.eleve, result.dettes);
-        } else {
-          const cached = await getCachedStudent(studentId);
-          if (cached) {
-            setEleve(cached.eleve);
-            setDettes(cached.dettes);
-            setOffline(true);
+        if (cardToken) {
+          // New secure QR format — call verify-card endpoint
+          const result = await verifyCard(cardToken);
+          if (result.valid && result.user) {
+            const mapped: Eleve = {
+              id: result.user.id,
+              firstName: result.user.nom.split(' ')[0] ?? null,
+              lastName: result.user.nom.split(' ').slice(1).join(' ') || null,
+              matricule: result.user.matricule,
+              photoUrl: result.user.photoUrl,
+              email: null,
+              telephone: result.user.telephone,
+              role: result.user.role,
+              eleveClasse: result.user.classe ? { id: '', nom: result.user.classe } : null,
+            };
+            setEleve(mapped);
+            setDettes(null);
+            setScanResult(result.actif ? 'EN_REGLE' : 'INACTIF');
+            setOffline(false);
+            await cacheStudent(cacheKey, mapped, null);
           } else {
             setNotFound(true);
           }
+        } else {
+          // Legacy format — call scan endpoint
+          const result = await scanEleve(studentId);
+          if (result.found && result.eleve) {
+            setEleve(result.eleve);
+            setDettes(result.dettes);
+            setScanResult(result.scanResult);
+            setOffline(false);
+            await cacheStudent(cacheKey, result.eleve, result.dettes);
+          } else {
+            const cached = await getCachedStudent(cacheKey);
+            if (cached) {
+              setEleve(cached.eleve);
+              setDettes(cached.dettes);
+              setOffline(true);
+            } else {
+              setNotFound(true);
+            }
+          }
         }
       } catch {
-        const cached = await getCachedStudent(studentId);
+        const cached = await getCachedStudent(cacheKey);
         if (cached) {
           setEleve(cached.eleve);
           setDettes(cached.dettes);
@@ -70,7 +97,7 @@ export default function ResultScreen({ route, navigation }: Props) {
         }
       }
     } else {
-      const cached = await getCachedStudent(studentId);
+      const cached = await getCachedStudent(cacheKey);
       if (cached) {
         setEleve(cached.eleve);
         setDettes(cached.dettes);

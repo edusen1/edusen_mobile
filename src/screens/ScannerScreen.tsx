@@ -44,17 +44,27 @@ export default function ScannerScreen() {
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     let studentId: string | null = null;
+    let cardToken: string | null = null;
 
-    // Try 1: plain UUID
-    if (uuidRegex.test(data.trim())) {
+    // Try 1: URL with card token (new format)
+    // e.g. https://edusen-api.assanediallo.com/api/admin/verify-card/abc123def456...
+    const tokenMatch = data.match(/\/verify-card\/([a-f0-9]{32})$/i);
+    if (tokenMatch) {
+      cardToken = tokenMatch[1];
+    }
+
+    // Try 2: plain UUID (legacy)
+    if (!cardToken && uuidRegex.test(data.trim())) {
       studentId = data.trim();
     }
 
-    // Try 2: JSON payload from EDUSEN card ({"type":"EDUSEN_ID_CARD","userId":"...","matricule":"...",...})
-    if (!studentId) {
+    // Try 3: JSON payload (legacy {"type":"EDUSEN_ID_CARD","userId":"..."})
+    if (!cardToken && !studentId) {
       try {
         const parsed = JSON.parse(data);
-        if (parsed.userId && uuidRegex.test(parsed.userId)) {
+        if (parsed.token) {
+          cardToken = parsed.token;
+        } else if (parsed.userId && uuidRegex.test(parsed.userId)) {
           studentId = parsed.matricule || parsed.userId;
         }
       } catch {
@@ -62,7 +72,7 @@ export default function ScannerScreen() {
       }
     }
 
-    if (!studentId) {
+    if (!cardToken && !studentId) {
       if (!scanned) {
         setScanned(true);
         Alert.alert(
@@ -76,7 +86,7 @@ export default function ScannerScreen() {
 
     processingRef.current = true;
     setScanned(true);
-    navigation.navigate('Result', { studentId });
+    navigation.navigate('Result', { studentId: studentId ?? '', cardToken: cardToken ?? undefined });
   };
 
   // Permission not yet determined
